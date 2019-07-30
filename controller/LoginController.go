@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"gin-test/pkg/response"
+	"gin-practice/pkg/response"
 	"github.com/gin-gonic/gin"
 )
 

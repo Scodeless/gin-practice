@@ -1,9 +1,10 @@
 package main
 
 import (
-	"gin-test/controller"
-	"gin-test/pkg/database"
-	"gin-test/pkg/rpc/server"
+	"fmt"
+	"gin-practice/controller"
+	"gin-practice/pkg/rpc/server"
+	"github.com/astaxie/beego"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,7 +13,9 @@ func init()  {
 	go server.StartRpc()
 
 	//连接数据库
-	database.DbInit()
+	//database.DbInit()
+
+	fmt.Println(beego.BConfig.AppName)
 }
 
 func main()  {

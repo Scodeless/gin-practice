@@ -2,7 +2,7 @@ package database
 
 import (
 	"fmt"
-	"gin-test/pkg/setting"
+	"gin-practice/pkg/setting"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"log"
