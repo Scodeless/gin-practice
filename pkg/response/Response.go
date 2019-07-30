@@ -6,10 +6,11 @@ import (
 )
 
 type Response struct {
+	G *gin.Context
 }
 
-func (res *Response) Response(g *gin.Context, code int64, message string, data interface{}) {
-	g.JSON(200, gin.H{
+func (res *Response) Response(code int64, message string, data interface{}) {
+	res.G.JSON(200, gin.H{
 		"Runtime": time.Since(time.Now()).Seconds(),
 		"Code": code,
 		"Error": message,

@@ -1,10 +1,8 @@
 package main
 
 import (
-	"fmt"
-	"gin-practice/controller"
+	"gin-practice/controller/login"
 	"gin-practice/pkg/rpc/server"
-	"github.com/astaxie/beego"
 	"github.com/gin-gonic/gin"
 )
 
@@ -14,15 +12,13 @@ func init()  {
 
 	//连接数据库
 	//database.DbInit()
-
-	fmt.Println(beego.BConfig.AppName)
 }
 
 func main()  {
 
 	r := gin.Default()
 	v1 := r.Group("/v1")
-	v1.POST("/login",  controller.Login)
+	v1.POST("/login", login.Login)
 
 	_ = r.Run(":3000")
 }
