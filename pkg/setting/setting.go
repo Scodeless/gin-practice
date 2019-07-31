@@ -30,7 +30,7 @@ var (
 
 func init()  {
 	var err error
-	Ini, err = ini.Load("conf/app.ini")
+	Ini, err = ini.Load("conf/app.conf")
 	if err !=nil {
 		log.Fatalf("fail to load config file: %v", err)
 	}
