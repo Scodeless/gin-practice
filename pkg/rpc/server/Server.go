@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
-	pb "gin-test/pkg/rpc/proto"
+	pb "gin-practice/pkg/rpc/proto"
 	"google.golang.org/grpc"
 	"log"
 	"net"

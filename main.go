@@ -1,9 +1,8 @@
 package main
 
 import (
-	"gin-test/controller"
-	"gin-test/pkg/database"
-	"gin-test/pkg/rpc/server"
+	"gin-practice/controller/login"
+	"gin-practice/pkg/rpc/server"
 	"github.com/gin-gonic/gin"
 )
 
@@ -12,14 +11,14 @@ func init()  {
 	go server.StartRpc()
 
 	//连接数据库
-	database.DbInit()
+	//database.DbInit()
 }
 
 func main()  {
 
 	r := gin.Default()
 	v1 := r.Group("/v1")
-	v1.POST("/login",  controller.Login)
+	v1.POST("/login", login.Login)
 
 	_ = r.Run(":3000")
 }
