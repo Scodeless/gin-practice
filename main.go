@@ -1,7 +1,7 @@
 package main
 
 import (
-	"gin-practice/controller/login"
+	"gin-practice/controller"
 	"gin-practice/pkg/rpc/server"
 	"github.com/gin-gonic/gin"
 )
@@ -17,8 +17,12 @@ func init()  {
 func main()  {
 
 	r := gin.Default()
+
 	v1 := r.Group("/v1")
-	v1.POST("/login", login.Login)
+	v1.POST("/login", func(ctx *gin.Context) {
+		LoginController := controller.NewLoginController(ctx)
+		LoginController.Login()
+	})
 
 	_ = r.Run(":3000")
 }
