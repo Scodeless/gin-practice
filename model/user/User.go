@@ -1,4 +1,4 @@
-package model
+package user
 
 type User struct {
 	UserId uint64 `gorm:"primary_key"`
@@ -7,6 +7,6 @@ type User struct {
 	Gender uint64
 }
 
-func (u User) TableName() string {
+func GetTableName() string {
 	return "users"
 }
