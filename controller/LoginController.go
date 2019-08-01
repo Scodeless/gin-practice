@@ -4,6 +4,7 @@ import (
 	"gin-practice/filter"
 	"gin-practice/pkg/response"
 	"github.com/gin-gonic/gin"
+	"time"
 )
 
 var (
@@ -16,18 +17,18 @@ type LoginController struct {
 }
 
 func (c *LoginController) Login() {
-	_ = LoginFilter.Login()
 	userName := c.Gin.PostForm("username")
 	password := c.Gin.PostForm("password")
 	userInfo := make(map[string]string, 0)
 	userInfo["username"] = userName
 	userInfo["password"] = password
-	c.Res.Response(200, "success", "test")
+	_ = LoginFilter.Login(userInfo)
+	c.Res.Response(200, "success", userInfo)
 }
 
 func NewLoginController(g *gin.Context) LoginController {
 	return LoginController{
 		Gin: g,
-		Res: &response.Response{G:g},
+		Res: &response.Response{G:g, Time:time.Now()},
 	}
 }

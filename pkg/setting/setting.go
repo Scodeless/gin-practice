@@ -28,7 +28,7 @@ var (
 //	Password string
 //}
 
-func init()  {
+func init() {
 	var err error
 	Ini, err = ini.Load("conf/app.conf")
 	if err !=nil {

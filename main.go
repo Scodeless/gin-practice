@@ -15,5 +15,8 @@ func init()  {
 
 func main()  {
 	r := routers.RouterInit()
+
+	//use pprof listen
+	//ginpprof.Wrapper(r)
 	_ = r.Run(":3000")
 }
