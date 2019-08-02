@@ -14,7 +14,7 @@ func (c *LoginService) Login(username, password string) (userInfo *user.User, er
 	err = database.Conn.Table(user.GetTableName()).Select("user_id, age, gender, username").
 		Where("username = ? and password = ?", username, password).Find(&userStruct).Error
 	if err != nil {
-		
+
 	}
 
 	return nil, nil
