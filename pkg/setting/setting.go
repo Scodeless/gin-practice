@@ -58,7 +58,7 @@ func LoadDataBase() {
 	database, err := Ini.GetSection("database")
 
 	if err != nil {
-		log.Fatalf("fail to load section database,please add database config")
+		log.Fatalf("fail to load section db,please add db config")
 	}
 	Db.Host = database.Key("HOST").MustString("127.0.0.1")
 	Db.Port = database.Key("PORT").MustInt(3306)
@@ -67,11 +67,11 @@ func LoadDataBase() {
 	Db.Name = database.Key("NAME").MustString("")
 	Db.TablePrifix = database.Key("TABLE_PRIFIX").MustString("")
 	//Db{
-	//	Host: database.Key("HOST").MustString("127.0.0.1"),
-	//	Port: database.Key("PORT").MustInt(3306),
-	//	User: database.Key("USER").MustString("root"),
-	//	Password: database.Key("PASSWORD").MustString(""),
-	//	Name: database.Key("NAME").MustString(""),
-	//	TablePrifix: database.Key("TABLE_PRIFIX").MustString(""),
+	//	Host: db.Key("HOST").MustString("127.0.0.1"),
+	//	Port: db.Key("PORT").MustInt(3306),
+	//	User: db.Key("USER").MustString("root"),
+	//	Password: db.Key("PASSWORD").MustString(""),
+	//	Name: db.Key("NAME").MustString(""),
+	//	TablePrifix: db.Key("TABLE_PRIFIX").MustString(""),
 	//}
 }

@@ -1,4 +1,4 @@
-package database
+package db
 
 import (
 	"fmt"
@@ -9,7 +9,8 @@ import (
 
 var Conn *gorm.DB
 
-func DbInit() (*gorm.DB, error) {
+func GetDbConn() (*gorm.DB, error) {
+	//连接数据库
 	conStr := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8&parseTime=True&loc=Local",setting.Db.User, setting.Db.Password, setting.Db.Host, setting.Db.Name)
 	fmt.Println(conStr)
 	db, err := gorm.Open("mysql", conStr)

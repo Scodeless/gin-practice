@@ -9,14 +9,14 @@ import (
 )
 
 var (
-	LoginService *service.LoginService
+	AuthService *service.AuthService
 )
 
-type LoginFilter struct {
+type AuthFilter struct {
 	Gin *gin.Context
 }
 
-func (f *LoginFilter) Login() (user *user.User, err error) {
+func (f *AuthFilter) Login() (user []*user.User, err error) {
 	userName := f.Gin.PostForm("username")
 	password := f.Gin.PostForm("password")
 	valid := validation.Validation{}
@@ -26,7 +26,7 @@ func (f *LoginFilter) Login() (user *user.User, err error) {
 		return nil, errors.New(valid.Errors[0].String())
 	}
 
-	userInfo, err := LoginService.Login(userName, password)
+	userInfo, err := AuthService.Login(userName, password)
 
 	if err != nil {
 		return nil, errors.New(err.Error())

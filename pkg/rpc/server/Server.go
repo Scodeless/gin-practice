@@ -35,4 +35,6 @@ func StartRpc()  {
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+
+	fmt.Println("rpc start success")
 }

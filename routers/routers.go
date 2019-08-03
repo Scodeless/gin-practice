@@ -7,12 +7,14 @@ import (
 
 func RouterInit() *gin.Engine {
 
-	router := gin.Default()
+	router := gin.New()
 	v1 := router.Group("/v1")
-	v1.POST("/login", func(ctx *gin.Context) {
-		LoginController := controller.NewLoginController(ctx)
-		LoginController.Login()
-	})
+	{
+		v1.POST("/auth/login", func(ctx *gin.Context) {
+			AuthController := controller.NewAuthController(ctx)
+			AuthController.Login()
+		})
+	}
 
 	return router
 }

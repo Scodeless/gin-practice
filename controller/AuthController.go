@@ -7,23 +7,23 @@ import (
 	"time"
 )
 
-type LoginController struct {
+type AuthController struct {
 	Gin *gin.Context
 	Res *response.Response
-	LoginFilter *filter.LoginFilter
+	AuthFilter *filter.AuthFilter
 }
 
-func NewLoginController(g *gin.Context) *LoginController {
-	return &LoginController{
+func NewAuthController(g *gin.Context) *AuthController {
+	return &AuthController{
 		Gin: g,
 		Res: &response.Response{G:g, Time:time.Now()},
-		LoginFilter: &filter.LoginFilter{g},
+		AuthFilter: &filter.AuthFilter{Gin: g},
 	}
 }
 
-func (c *LoginController) Login() {
+func (c *AuthController) Login() {
 
-	userInfo, err := c.LoginFilter.Login()
+	userInfo, err := c.AuthFilter.Login()
 
 	if err != nil {
 		c.Res.Response(404, err.Error(), nil)
