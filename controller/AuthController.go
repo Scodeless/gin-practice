@@ -11,6 +11,7 @@ type AuthController struct {
 	Gin *gin.Context
 	Res *response.Response
 	AuthFilter *filter.AuthFilter
+	BaseController
 }
 
 func NewAuthController(g *gin.Context) *AuthController {
@@ -26,10 +27,10 @@ func (c *AuthController) Login() {
 	userInfo, err := c.AuthFilter.Login()
 
 	if err != nil {
-		c.Res.Response(404, err.Error(), nil)
+		c.Res.Response(FailedCode, err.Error(), nil)
 		return
 	}
 
-	c.Res.Response(200, "success", userInfo)
+	c.Res.Response(SuccessCode, "success", userInfo)
 }
 
