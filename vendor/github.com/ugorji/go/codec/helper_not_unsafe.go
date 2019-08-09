@@ -182,7 +182,11 @@ func (d *Decoder) kTime(f *codecFnInfo, rv reflect.Value) {
 }
 
 func (d *Decoder) kFloat32(f *codecFnInfo, rv reflect.Value) {
-	rv.SetFloat(float64(d.decodeFloat32()))
+	fv := d.d.DecodeFloat64()
+	if chkOvf.Float32(fv) {
+		d.errorf("float32 overflow: %v", fv)
+	}
+	rv.SetFloat(fv)
 }
 
 func (d *Decoder) kFloat64(f *codecFnInfo, rv reflect.Value) {

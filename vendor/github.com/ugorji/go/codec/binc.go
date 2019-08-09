@@ -100,7 +100,6 @@ func bincdesc(vd, vs byte) string {
 }
 
 type bincEncDriver struct {
-	encDriverNoopContainerWriter
 	e *Encoder
 	h *BincHandle
 	w *encWriterSwitch
@@ -108,10 +107,10 @@ type bincEncDriver struct {
 	b [16]byte          // scratch, used for encoding numbers - bigendian style
 	s uint16            // symbols sequencer
 	// c containerState
-	// encDriverTrackContainerWriter
+	encDriverTrackContainerWriter
 	noBuiltInTypes
 	// encNoSeparator
-	// _ [1]uint64 // padding
+	_ [1]uint64 // padding
 }
 
 func (e *bincEncDriver) EncodeNil() {
@@ -215,28 +214,17 @@ func (e *bincEncDriver) encUint(bd byte, pos bool, v uint64) {
 	}
 }
 
-func (e *bincEncDriver) EncodeExt(v interface{}, xtag uint64, ext Ext) {
-	var bs []byte
-	var bufp bytesBufPooler
-	if ext == SelfExt {
-		bs = bufp.get(1024)[:0]
-		e.e.sideEncode(v, &bs)
-		// xdebugf("binc EncodeExt: xbs: len: %d, %v", len(bs), bs)
-	} else {
-		bs = ext.WriteExt(v)
-	}
+func (e *bincEncDriver) EncodeExt(rv interface{}, xtag uint64, ext Ext, _ *Encoder) {
+	bs := ext.WriteExt(rv)
 	if bs == nil {
 		e.EncodeNil()
 		return
 	}
 	e.encodeExtPreamble(uint8(xtag), len(bs))
 	e.w.writeb(bs)
-	if ext == SelfExt {
-		bufp.end()
-	}
 }
 
-func (e *bincEncDriver) EncodeRawExt(re *RawExt) {
+func (e *bincEncDriver) EncodeRawExt(re *RawExt, _ *Encoder) {
 	e.encodeExtPreamble(uint8(re.Tag), len(re.Data))
 	e.w.writeb(re.Data)
 }
@@ -248,10 +236,12 @@ func (e *bincEncDriver) encodeExtPreamble(xtag byte, length int) {
 
 func (e *bincEncDriver) WriteArrayStart(length int) {
 	e.encLen(bincVdArray<<4, uint64(length))
+	e.c = containerArrayStart
 }
 
 func (e *bincEncDriver) WriteMapStart(length int) {
 	e.encLen(bincVdMap<<4, uint64(length))
+	e.c = containerMapStart
 }
 
 func (e *bincEncDriver) EncodeSymbol(v string) {
@@ -274,8 +264,7 @@ func (e *bincEncDriver) EncodeSymbol(v string) {
 		return
 	}
 	if e.m == nil {
-		e.m = pool.mapStrU16.Get().(map[string]uint16)
-		// xdebug2f("creating e.m: %v, isnil: %v", e.m, e.m == nil)
+		e.m = make(map[string]uint16, 16)
 	}
 	ui, ok := e.m[v]
 	if ok {
@@ -319,8 +308,20 @@ func (e *bincEncDriver) EncodeSymbol(v string) {
 	}
 }
 
+func (e *bincEncDriver) EncodeString(c charEncoding, v string) {
+	if e.c == containerMapKey && c == cUTF8 && (e.h.AsSymbols == 0 || e.h.AsSymbols == 1) {
+		e.EncodeSymbol(v)
+		return
+	}
+	l := uint64(len(v))
+	e.encBytesLen(c, l)
+	if l > 0 {
+		e.w.writestr(v)
+	}
+}
+
 func (e *bincEncDriver) EncodeStringEnc(c charEncoding, v string) {
-	if e.e.c == containerMapKey && c == cUTF8 && (e.h.AsSymbols == 0 || e.h.AsSymbols == 1) {
+	if e.c == containerMapKey && c == cUTF8 && (e.h.AsSymbols == 0 || e.h.AsSymbols == 1) {
 		e.EncodeSymbol(v)
 		return
 	}
@@ -330,6 +331,18 @@ func (e *bincEncDriver) EncodeStringEnc(c charEncoding, v string) {
 		e.w.writestr(v)
 	}
 
+}
+
+func (e *bincEncDriver) EncodeStringBytes(c charEncoding, v []byte) {
+	if v == nil {
+		e.EncodeNil()
+		return
+	}
+	l := uint64(len(v))
+	e.encBytesLen(c, l)
+	if l > 0 {
+		e.w.writeb(v)
+	}
 }
 
 func (e *bincEncDriver) EncodeStringBytesRaw(v []byte) {
@@ -378,11 +391,11 @@ func (e *bincEncDriver) encLenNumber(bd byte, v uint64) {
 
 //------------------------------------
 
-// type bincDecSymbol struct {
-// 	s string
-// 	b []byte
-// 	// i uint16
-// }
+type bincDecSymbol struct {
+	s string
+	b []byte
+	i uint16
+}
 
 type bincDecDriver struct {
 	decDriverNoopContainerReader
@@ -396,10 +409,10 @@ type bincDecDriver struct {
 	bd     byte
 	vd     byte
 	vs     byte
-	// _      [3]byte // padding
+	_      [3]byte // padding
 	// linear searching on this slice is ok,
 	// because we typically expect < 32 symbols in each stream.
-	s map[uint16]strBytes // []bincDecSymbol
+	s []bincDecSymbol
 
 	// noStreamingCodec
 	// decNoSeparator
@@ -726,31 +739,23 @@ func (d *bincDecDriver) decStringAndBytes(bs []byte, withString, zerocopy bool) 
 			symbol = uint16(bigen.Uint16(d.r.readx(2)))
 		}
 		if d.s == nil {
-			d.s = pool.mapU16StrBytes.Get().(map[uint16]strBytes) // make([]bincDecSymbol, 0, 16)
+			d.s = make([]bincDecSymbol, 0, 16)
 		}
 
 		if vs&0x4 == 0 {
-			ss := d.s[symbol]
-			bs2 = ss.b
-			if withString {
-				if ss.s == "" && len(ss.b) > 0 {
-					ss.s = string(ss.b)
+			for i := range d.s {
+				j := &d.s[i]
+				if j.i == symbol {
+					bs2 = j.b
+					if withString {
+						if j.s == "" && bs2 != nil {
+							j.s = string(bs2)
+						}
+						s = j.s
+					}
+					break
 				}
-				s = ss.s
 			}
-			// for i := range d.s {
-			// 	j := &d.s[i]
-			// 	if j.i == symbol {
-			// 		bs2 = j.b
-			// 		if withString {
-			// 			if j.s == "" && bs2 != nil {
-			// 				j.s = string(bs2)
-			// 			}
-			// 			s = j.s
-			// 		}
-			// 		break
-			// 	}
-			// }
 		} else {
 			switch vs & 0x3 {
 			case 0:
@@ -769,8 +774,7 @@ func (d *bincDecDriver) decStringAndBytes(bs []byte, withString, zerocopy bool) 
 			if withString {
 				s = string(bs2)
 			}
-			d.s[symbol] = strBytes{s: s, b: bs2}
-			// d.s = append(d.s, bincDecSymbol{i: symbol, s: s, b: bs2})
+			d.s = append(d.s, bincDecSymbol{i: symbol, s: s, b: bs2})
 		}
 	default:
 		d.d.errorf("string/bytes - %s %x-%x/%s", msgBadDesc, d.vd, d.vs, bincdesc(d.vd, d.vs))
@@ -803,16 +807,8 @@ func (d *bincDecDriver) DecodeBytes(bs []byte, zerocopy bool) (bsOut []byte) {
 	}
 	// check if an "array" of uint8's (see ContainerType for how to infer if an array)
 	if d.vd == bincVdArray {
-		if zerocopy && len(bs) == 0 {
-			bs = d.d.b[:]
-		}
-		// bsOut, _ = fastpathTV.DecSliceUint8V(bs, true, d.d)
-		slen := d.ReadArrayStart()
-		bs = usableByteSlice(bs, slen)
-		for i := 0; i < slen; i++ {
-			bs[i] = uint8(chkOvf.UintV(d.DecodeUint64(), 8))
-		}
-		return bs
+		bsOut, _ = fastpathTV.DecSliceUint8V(bs, true, d.d)
+		return
 	}
 	var clen int
 	if d.vd == bincVdString || d.vd == bincVdByteArray {
@@ -839,13 +835,10 @@ func (d *bincDecDriver) DecodeExt(rv interface{}, xtag uint64, ext Ext) (realxta
 	}
 	realxtag1, xbs := d.decodeExtV(ext != nil, uint8(xtag))
 	realxtag = uint64(realxtag1)
-	// xdebugf("binc DecodeExt: xbs: len: %d, %v", len(xbs), xbs)
 	if ext == nil {
 		re := rv.(*RawExt)
 		re.Tag = realxtag
 		re.Data = detachZeroCopyBytes(d.br, re.Data, xbs)
-	} else if ext == SelfExt {
-		d.d.sideDecode(rv, xbs)
 	} else {
 		ext.ReadExt(rv, xbs)
 	}
@@ -1014,7 +1007,7 @@ type BincHandle struct {
 	// - n: none
 	// - a: all: same as m, s, ...
 
-	_ [1]uint64 // padding (cache-aligned)
+	// _ [1]uint64 // padding
 }
 
 // Name returns the name of the handle: binc
@@ -1022,51 +1015,28 @@ func (h *BincHandle) Name() string { return "binc" }
 
 // SetBytesExt sets an extension
 func (h *BincHandle) SetBytesExt(rt reflect.Type, tag uint64, ext BytesExt) (err error) {
-	return h.SetExt(rt, tag, makeExt(ext))
+	return h.SetExt(rt, tag, &extWrapper{ext, interfaceExtFailer{}})
 }
 
 func (h *BincHandle) newEncDriver(e *Encoder) encDriver {
-	return &bincEncDriver{e: e, h: h, w: e.w()}
+	return &bincEncDriver{e: e, h: h, w: e.w}
 }
 
 func (h *BincHandle) newDecDriver(d *Decoder) decDriver {
-	return &bincDecDriver{d: d, h: h, r: d.r(), br: d.bytes}
+	return &bincDecDriver{d: d, h: h, r: d.r, br: d.bytes}
 }
 
 func (e *bincEncDriver) reset() {
-	// xdebugf("bincEncDriver: reset: e.m: %v, isnil: %v", e.m, e.m == nil)
-	e.w = e.e.w()
+	e.w = e.e.w
 	e.s = 0
+	e.c = 0
 	e.m = nil
 }
 
-func (e *bincEncDriver) atEndOfEncode() {
-	if e.m != nil {
-		// xdebug2f("bincEncDriver: reset: len: %d", len(e.m))
-		for k := range e.m {
-			delete(e.m, k)
-		}
-		pool.mapStrU16.Put(e.m)
-		e.m = nil
-	}
-}
-
 func (d *bincDecDriver) reset() {
-	// xdebugf("bincDecDriver: reset")
-	d.r, d.br = d.d.r(), d.d.bytes
+	d.r, d.br = d.d.r, d.d.bytes
 	d.s = nil
 	d.bd, d.bdRead, d.vd, d.vs = 0, false, 0, 0
-}
-
-func (d *bincDecDriver) atEndOfDecode() {
-	if d.s != nil {
-		// xdebug2f("bincDecDriver: reset: len: %d", len(d.s))
-		for k := range d.s {
-			delete(d.s, k)
-		}
-		pool.mapU16StrBytes.Put(d.s)
-		d.s = nil
-	}
 }
 
 // var timeDigits = [...]byte{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'}
@@ -1203,7 +1173,7 @@ func bincDecodeTime(bs []byte) (tt time.Time, err error) {
 		return
 	}
 	// In stdlib time.Parse, when a date is parsed without a zone name, it uses "" as zone name.
-	// However, we need name here, so it can be shown when time is printf.d.
+	// However, we need name here, so it can be shown when time is printed.
 	// Zone name is in form: UTC-08:00.
 	// Note that Go Libs do not give access to dst flag, so we ignore dst bits
 

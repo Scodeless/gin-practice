@@ -318,15 +318,8 @@ func (e *msgpackEncDriver) EncodeTime(t time.Time) {
 	}
 }
 
-func (e *msgpackEncDriver) EncodeExt(v interface{}, xtag uint64, ext Ext) {
-	var bs []byte
-	var bufp bytesBufPooler
-	if ext == SelfExt {
-		bs = bufp.get(1024)[:0]
-		e.e.sideEncode(v, &bs)
-	} else {
-		bs = ext.WriteExt(v)
-	}
+func (e *msgpackEncDriver) EncodeExt(v interface{}, xtag uint64, ext Ext, _ *Encoder) {
+	bs := ext.WriteExt(v)
 	if bs == nil {
 		e.EncodeNil()
 		return
@@ -337,12 +330,9 @@ func (e *msgpackEncDriver) EncodeExt(v interface{}, xtag uint64, ext Ext) {
 	} else {
 		e.EncodeStringBytesRaw(bs)
 	}
-	if ext == SelfExt {
-		bufp.end()
-	}
 }
 
-func (e *msgpackEncDriver) EncodeRawExt(re *RawExt) {
+func (e *msgpackEncDriver) EncodeRawExt(re *RawExt, _ *Encoder) {
 	e.encodeExtPreamble(uint8(re.Tag), len(re.Data))
 	e.w.writeb(re.Data)
 }
@@ -380,15 +370,39 @@ func (e *msgpackEncDriver) WriteMapStart(length int) {
 	e.writeContainerLen(msgpackContainerMap, length)
 }
 
-func (e *msgpackEncDriver) EncodeStringEnc(c charEncoding, s string) {
+func (e *msgpackEncDriver) EncodeString(c charEncoding, s string) {
 	slen := len(s)
-	if e.h.WriteExt {
-		e.writeContainerLen(msgpackContainerStr, slen)
+	if c == cRAW && e.h.WriteExt {
+		e.writeContainerLen(msgpackContainerBin, slen)
 	} else {
 		e.writeContainerLen(msgpackContainerRawLegacy, slen)
 	}
 	if slen > 0 {
 		e.w.writestr(s)
+	}
+}
+
+func (e *msgpackEncDriver) EncodeStringEnc(c charEncoding, s string) {
+	slen := len(s)
+	e.writeContainerLen(msgpackContainerStr, slen)
+	if slen > 0 {
+		e.w.writestr(s)
+	}
+}
+
+func (e *msgpackEncDriver) EncodeStringBytes(c charEncoding, bs []byte) {
+	if bs == nil {
+		e.EncodeNil()
+		return
+	}
+	slen := len(bs)
+	if c == cRAW && e.h.WriteExt {
+		e.writeContainerLen(msgpackContainerBin, slen)
+	} else {
+		e.writeContainerLen(msgpackContainerRawLegacy, slen)
+	}
+	if slen > 0 {
+		e.w.writeb(bs)
 	}
 }
 
@@ -507,7 +521,7 @@ func (d *msgpackDecDriver) DecodeNaked() {
 			n.v = valueTypeInt
 			n.i = int64(int8(bd))
 		case bd == mpStr8, bd == mpStr16, bd == mpStr32, bd >= mpFixStrMin && bd <= mpFixStrMax:
-			if d.h.WriteExt || d.h.RawToString {
+			if d.h.WriteExt {
 				n.v = valueTypeString
 				n.s = d.DecodeString()
 			} else {
@@ -687,22 +701,15 @@ func (d *msgpackDecDriver) DecodeBytes(bs []byte, zerocopy bool) (bsOut []byte) 
 		return
 	} else if bd == mpBin8 || bd == mpBin16 || bd == mpBin32 {
 		clen = d.readContainerLen(msgpackContainerBin) // binary
-	} else if bd == mpStr8 || bd == mpStr16 || bd == mpStr32 ||
-		(bd >= mpFixStrMin && bd <= mpFixStrMax) {
+	} else if bd == mpStr8 || bd == mpStr16 || bd == mpStr32 || (bd >= mpFixStrMin && bd <= mpFixStrMax) {
 		clen = d.readContainerLen(msgpackContainerStr) // string/raw
-	} else if bd == mpArray16 || bd == mpArray32 ||
-		(bd >= mpFixArrayMin && bd <= mpFixArrayMax) {
+	} else if bd == mpArray16 || bd == mpArray32 || (bd >= mpFixArrayMin && bd <= mpFixArrayMax) {
 		// check if an "array" of uint8's
 		if zerocopy && len(bs) == 0 {
 			bs = d.d.b[:]
 		}
-		// bsOut, _ = fastpathTV.DecSliceUint8V(bs, true, d.d)
-		slen := d.ReadArrayStart()
-		bs = usableByteSlice(bs, slen)
-		for i := 0; i < slen; i++ {
-			bs[i] = uint8(chkOvf.UintV(d.DecodeUint64(), 8))
-		}
-		return bs
+		bsOut, _ = fastpathTV.DecSliceUint8V(bs, true, d.d)
+		return
 	} else {
 		d.d.errorf("invalid byte descriptor for decoding bytes, got: 0x%x", d.bd)
 		return
@@ -748,11 +755,9 @@ func (d *msgpackDecDriver) ContainerType() (vt valueType) {
 	// 	// nil
 	// } else if bd == mpBin8 || bd == mpBin16 || bd == mpBin32 {
 	// 	// binary
-	// } else if bd == mpStr8 || bd == mpStr16 || bd == mpStr32 ||
-	// (bd >= mpFixStrMin && bd <= mpFixStrMax) {
+	// } else if bd == mpStr8 || bd == mpStr16 || bd == mpStr32 || (bd >= mpFixStrMin && bd <= mpFixStrMax) {
 	// 	// string/raw
-	// } else if bd == mpArray16 || bd == mpArray32 ||
-	// (bd >= mpFixArrayMin && bd <= mpFixArrayMax) {
+	// } else if bd == mpArray16 || bd == mpArray32 || (bd >= mpFixArrayMin && bd <= mpFixArrayMax) {
 	// 	// array
 	// } else if bd == mpMap16 || bd == mpMap32 || (bd >= mpFixMapMin && bd <= mpFixMapMax) {
 	// 	// map
@@ -761,9 +766,8 @@ func (d *msgpackDecDriver) ContainerType() (vt valueType) {
 		return valueTypeNil
 	} else if bd == mpBin8 || bd == mpBin16 || bd == mpBin32 {
 		return valueTypeBytes
-	} else if bd == mpStr8 || bd == mpStr16 || bd == mpStr32 ||
-		(bd >= mpFixStrMin && bd <= mpFixStrMax) {
-		if d.h.WriteExt || d.h.RawToString { // UTF-8 string (new spec)
+	} else if bd == mpStr8 || bd == mpStr16 || bd == mpStr32 || (bd >= mpFixStrMin && bd <= mpFixStrMax) {
+		if d.h.WriteExt { // UTF-8 string (new spec)
 			return valueTypeString
 		}
 		return valueTypeBytes // raw (old spec)
@@ -862,8 +866,7 @@ func (d *msgpackDecDriver) DecodeTime() (t time.Time) {
 		return
 	} else if bd == mpBin8 || bd == mpBin16 || bd == mpBin32 {
 		clen = d.readContainerLen(msgpackContainerBin) // binary
-	} else if bd == mpStr8 || bd == mpStr16 || bd == mpStr32 ||
-		(bd >= mpFixStrMin && bd <= mpFixStrMax) {
+	} else if bd == mpStr8 || bd == mpStr16 || bd == mpStr32 || (bd >= mpFixStrMin && bd <= mpFixStrMax) {
 		clen = d.readContainerLen(msgpackContainerStr) // string/raw
 	} else {
 		// expect to see mpFixExt4,-1 OR mpFixExt8,-1 OR mpExt8,12,-1
@@ -914,8 +917,6 @@ func (d *msgpackDecDriver) DecodeExt(rv interface{}, xtag uint64, ext Ext) (real
 		re := rv.(*RawExt)
 		re.Tag = realxtag
 		re.Data = detachZeroCopyBytes(d.br, re.Data, xbs)
-	} else if ext == SelfExt {
-		d.d.sideDecode(rv, xbs)
 	} else {
 		ext.ReadExt(rv, xbs)
 	}
@@ -978,7 +979,7 @@ type MsgpackHandle struct {
 	binaryEncodingType
 	noElemSeparators
 
-	_ [1]uint64 // padding (cache-aligned)
+	// _ [1]uint64 // padding
 }
 
 // Name returns the name of the handle: msgpack
@@ -986,23 +987,23 @@ func (h *MsgpackHandle) Name() string { return "msgpack" }
 
 // SetBytesExt sets an extension
 func (h *MsgpackHandle) SetBytesExt(rt reflect.Type, tag uint64, ext BytesExt) (err error) {
-	return h.SetExt(rt, tag, makeExt(ext))
+	return h.SetExt(rt, tag, &extWrapper{ext, interfaceExtFailer{}})
 }
 
 func (h *MsgpackHandle) newEncDriver(e *Encoder) encDriver {
-	return &msgpackEncDriver{e: e, w: e.w(), h: h}
+	return &msgpackEncDriver{e: e, w: e.w, h: h}
 }
 
 func (h *MsgpackHandle) newDecDriver(d *Decoder) decDriver {
-	return &msgpackDecDriver{d: d, h: h, r: d.r(), br: d.bytes}
+	return &msgpackDecDriver{d: d, h: h, r: d.r, br: d.bytes}
 }
 
 func (e *msgpackEncDriver) reset() {
-	e.w = e.e.w()
+	e.w = e.e.w
 }
 
 func (d *msgpackDecDriver) reset() {
-	d.r, d.br = d.d.r(), d.d.bytes
+	d.r, d.br = d.d.r, d.d.bytes
 	d.bd, d.bdRead = 0, false
 }
 
