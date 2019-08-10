@@ -12,7 +12,7 @@ var Conn *gorm.DB
 func GetDbConn() (*gorm.DB, error) {
 	//连接数据库
 	conStr := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8&parseTime=True&loc=Local",setting.Db.User, setting.Db.Password, setting.Db.Host, setting.Db.Name)
-	fmt.Println(conStr)
+	//fmt.Println(conStr)
 	db, err := gorm.Open("mysql", conStr)
 	Conn = db
 
