@@ -33,3 +33,19 @@ func (f *AuthFilter) Login() (user []*user.User, err error) {
 	}
 	return userInfo, nil
 }
+
+func (f *AuthFilter) Register() (err error) {
+	userName := f.Gin.PostForm("username")
+	password := f.Gin.PostForm("password")
+	valid := validation.Validation{}
+	valid.Required(userName, "username").Message("username is required")
+	valid.Required(password, "password").Message("password is required")
+	if valid.HasErrors() {
+		return errors.New(valid.Errors[0].String())
+	}
+	res, bools := AuthService.Register(userName, password)
+	if !bools {
+		return errors.New(res.Error())
+	}
+	return nil
+}

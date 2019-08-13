@@ -23,3 +23,8 @@ func (c *AuthService) Login(username, password string) (userInfo []*user.User, e
 
 	return userStruct, nil
 }
+
+func (c *AuthService) Register(username, password string) (err error, bool bool) {
+	
+	return nil, true
+}
