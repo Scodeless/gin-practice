@@ -38,6 +38,7 @@ func (c *AuthController) Register() {
 
 	if err != nil {
 		c.Res.Response(FailedCode, err.Error(), nil)
+		return
 	}
 
 	c.Res.Response(SuccessCode, "success", nil)

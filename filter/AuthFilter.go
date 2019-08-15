@@ -43,9 +43,9 @@ func (f *AuthFilter) Register() (err error) {
 	if valid.HasErrors() {
 		return errors.New(valid.Errors[0].String())
 	}
-	res, bools := AuthService.Register(userName, password)
-	if !bools {
-		return errors.New(res.Error())
+	err = AuthService.Register(userName, password)
+	if err != nil {
+		return errors.New(err.Error())
 	}
 	return nil
 }

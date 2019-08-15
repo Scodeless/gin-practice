@@ -5,6 +5,7 @@ type User struct {
 	UserName string
 	Age uint64
 	Gender uint64
+	Password string
 }
 
 func GetTableName() string {

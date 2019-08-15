@@ -14,6 +14,10 @@ func RouterInit() *gin.Engine {
 			AuthController := controller.NewAuthController(ctx)
 			AuthController.Login()
 		})
+		v1.POST("/auth/register", func(ctx *gin.Context) {
+			AuthController := controller.NewAuthController(ctx)
+			AuthController.Register()
+		})
 	}
 
 	return router
