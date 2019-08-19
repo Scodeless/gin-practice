@@ -19,32 +19,22 @@ var (
 	   }
 	)
 
-//type Db struct{
-//	Host string
-//	Port int
-//	User string
-//	Name string
-//	TablePrifix string
-//	Password string
-//}
-
 func init() {
 	var err error
 	Ini, err = ini.Load("conf/app.conf")
 	if err !=nil {
 		log.Fatalf("fail to load config file: %v", err)
 	}
-
 	LoadBase()
 	LoadServer()
 	LoadDataBase()
 }
 
-func LoadBase()  {
+func LoadBase() {
 	RunMode = Ini.Section("").Key("RUN_MODE").MustString("dev")
 }
 
-func LoadServer()  {
+func LoadServer() {
 	server, err := Ini.GetSection("server")
 
 	if err != nil {
