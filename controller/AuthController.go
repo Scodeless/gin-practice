@@ -20,22 +20,22 @@ func (c *AuthController) Login() {
 	userInfo, err := AuthFilter.Login()
 
 	if err != nil {
-		c.Response(FailedCode, err.Error(), nil)
+		c.FailResponse(nil, err)
 		return
 	}
 
-	c.Response(SuccessCode, "success", userInfo)
+	c.SuccessResponse(userInfo)
 }
 
 func (c *AuthController) Register() {
 	err := AuthFilter.Register()
 
 	if err != nil {
-		c.Response(FailedCode, err.Error(), nil)
+		c.FailResponse(nil, err)
 		return
 	}
 
-	c.Response(SuccessCode, "success", nil)
+	c.SuccessResponse(nil)
 }
 
 func (c *AuthController) BulkInsertToES() {

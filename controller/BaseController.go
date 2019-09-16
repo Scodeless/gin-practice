@@ -3,6 +3,7 @@ package controller
 import (
 	"gin-practice/pkg/controllerHelper"
 	"gin-practice/pkg/response"
+	"net/http"
 	"time"
 )
 
@@ -31,6 +32,10 @@ func (c *BaseController) Finish() {
 
 }
 
-func (c *BaseController) Response(code int, message string, data interface{}) {
-	c.GinContext.JSON(200, &response.Response{RunTime: time.Since(c.Runtime).Seconds(), Code: code, Message: message, Data: data})
+func (c *BaseController) SuccessResponse(data interface{}) {
+	c.GinContext.JSON(http.StatusOK, &response.Response{RunTime: time.Since(c.Runtime).Seconds(), Code: 1, Message: "success", Data: data})
+}
+
+func (c *BaseController) FailResponse(data interface{}, err error) {
+	c.GinContext.JSON(http.StatusOK, &response.Response{RunTime: time.Since(c.Runtime).Seconds(), Code: -1, Message: err.Error(), Data: data})
 }
