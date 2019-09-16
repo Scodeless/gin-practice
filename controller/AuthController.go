@@ -2,45 +2,43 @@ package controller
 
 import (
 	"gin-practice/filter"
-	"gin-practice/pkg/response"
-	"github.com/gin-gonic/gin"
-	"time"
+)
+
+var (
+	AuthFilter *filter.AuthFilter
 )
 
 type AuthController struct {
-	Gin *gin.Context
-	Res *response.Response
-	AuthFilter *filter.AuthFilter
-	//BaseController
+	BaseController
 }
 
-func NewAuthController(g *gin.Context) *AuthController {
-	return &AuthController{
-		Gin: g,
-		Res: &response.Response{G:g, Time:time.Now()},
-		AuthFilter: &filter.AuthFilter{Gin: g},
-	}
+func (c *AuthController) Initialise() {
+	AuthFilter = filter.NewAuthFilter(c.GinContext)
 }
 
 func (c *AuthController) Login() {
-	userInfo, err := c.AuthFilter.Login()
+	userInfo, err := AuthFilter.Login()
 
 	if err != nil {
-		c.Res.Response(FailedCode, err.Error(), nil)
+		c.Response(FailedCode, err.Error(), nil)
 		return
 	}
 
-	c.Res.Response(SuccessCode, "success", userInfo)
+	c.Response(SuccessCode, "success", userInfo)
 }
 
 func (c *AuthController) Register() {
-	err := c.AuthFilter.Register()
+	err := AuthFilter.Register()
 
 	if err != nil {
-		c.Res.Response(FailedCode, err.Error(), nil)
+		c.Response(FailedCode, err.Error(), nil)
 		return
 	}
 
-	c.Res.Response(SuccessCode, "success", nil)
+	c.Response(SuccessCode, "success", nil)
 }
 
+func (c *AuthController) BulkInsertToES() {
+	//req := elastic.NewBulkIndexRequest()
+	//bulkResponse, err := esClient.EsConn.Bulk().Add().Do(context.Background())
+}

@@ -12,6 +12,7 @@ require (
 	github.com/mailru/easyjson v0.0.0-20190626092158-b2ccc519800e // indirect
 	github.com/mattn/go-isatty v0.0.8 // indirect
 	github.com/olivere/elastic v6.2.22+incompatible
+	github.com/streadway/amqp v0.0.0-20190827072141-edfb9018d271
 	google.golang.org/grpc v1.22.1
 	gopkg.in/ini.v1 v1.46.0 // indirect
 )

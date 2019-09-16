@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gin-practice/pkg/db"
 	"gin-practice/pkg/esClient"
+	"gin-practice/pkg/rabbitMQ"
 	"gin-practice/pkg/rpc/server"
 	"gin-practice/pkg/setting"
 	"gin-practice/routers"
@@ -38,8 +39,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("es connect failed, %v", err)
 	}
-	_, code, _ := esConn.Ping("http://127.0.0.1:9200").Do(context.Background())
-	fmt.Println("es database connect code", code)
+	_, _, _ = esConn.Ping("http://127.0.0.1:9200").Do(context.Background())
+	fmt.Println("es database connect success")
+
+	//连接RabbitMQ
+	rmqConn := rabbitMQ.ConnectRabbitMQServer()
+	defer rmqConn.Close()
+	fmt.Println("rabbitMQ connect success")
 
 	//初始化路由
 	r := routers.RouterInit()

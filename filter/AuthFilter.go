@@ -16,6 +16,12 @@ type AuthFilter struct {
 	Gin *gin.Context
 }
 
+func NewAuthFilter(ctx *gin.Context) *AuthFilter {
+	return &AuthFilter{
+		Gin: ctx,
+	}
+}
+
 func (f *AuthFilter) Login() (user []*user.User, err error) {
 	userName := f.Gin.PostForm("username")
 	password := f.Gin.PostForm("password")
