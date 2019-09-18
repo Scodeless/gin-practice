@@ -15,8 +15,8 @@ func RouterInit() *gin.Engine {
 		v1.POST("/auth/login", BindRouter(new(controller.AuthController), "Login"))
 		v1.POST("/auth/register", BindRouter(new(controller.AuthController), "Register"))
 
-		v1.POST("/publish/message", BindRouter(new(controller.RabbitMQController), "Publish"))
-		v1.GET("/consume/message", BindRouter(new(controller.RabbitMQController), "Consume"))
+		v1.POST("/publish/message", BindRouter(new(controller.RabbitMQController), "Producer"))
+		v1.GET("/consume/message", BindRouter(new(controller.RabbitMQController), "Consumer"))
 	}
 
 	return router

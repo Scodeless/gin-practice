@@ -20,7 +20,7 @@ func (c *AuthController) Login() {
 	userInfo, err := AuthFilter.Login()
 
 	if err != nil {
-		c.FailResponse(nil, err)
+		c.FailResponse(err)
 		return
 	}
 
@@ -31,7 +31,7 @@ func (c *AuthController) Register() {
 	err := AuthFilter.Register()
 
 	if err != nil {
-		c.FailResponse(nil, err)
+		c.FailResponse(err)
 		return
 	}
 
