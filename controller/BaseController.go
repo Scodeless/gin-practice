@@ -33,9 +33,9 @@ func (c *BaseController) Finish() {
 }
 
 func (c *BaseController) SuccessResponse(data interface{}) {
-	c.GinContext.JSON(http.StatusOK, &response.Response{RunTime: time.Since(c.Runtime).Seconds(), Code: 1, Message: "success", Data: data})
+	c.GinContext.JSON(http.StatusOK, &response.Response{RunTime: time.Since(c.Runtime).Seconds(), Code: SuccessCode, Message: "success", Data: data})
 }
 
 func (c *BaseController) FailResponse(err error) {
-	c.GinContext.JSON(http.StatusOK, &response.Response{RunTime: time.Since(c.Runtime).Seconds(), Code: -1, Message: err.Error(), Data: nil})
+	c.GinContext.JSON(http.StatusOK, &response.Response{RunTime: time.Since(c.Runtime).Seconds(), Code: FailedCode, Message: err.Error(), Data: nil})
 }

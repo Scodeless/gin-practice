@@ -1,10 +1,8 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"gin-practice/pkg/db"
-	"gin-practice/pkg/esClient"
 	"gin-practice/pkg/rabbitMQ"
 	"gin-practice/pkg/rpc/server"
 	"gin-practice/pkg/setting"
@@ -35,12 +33,12 @@ func main() {
 	defer conn.Close()
 
 	//连接es
-	esConn, err := esClient.ConnectElasticSearchClient()
-	if err != nil {
-		log.Fatalf("es connect failed, %v", err)
-	}
-	_, _, _ = esConn.Ping("http://127.0.0.1:9200").Do(context.Background())
-	fmt.Println("es database connect success")
+	//esConn, err := esClient.ConnectElasticSearchClient()
+	//if err != nil {
+	//	log.Fatalf("es connect failed, %v", err)
+	//}
+	//_, _, _ = esConn.Ping("http://127.0.0.1:9200").Do(context.Background())
+	//fmt.Println("es database connect success")
 
 	//连接RabbitMQ
 	rmqConn := rabbitMQ.ConnectRabbitMQServer()
